@@ -156,8 +156,9 @@ img {
 }
 
 .header__logo-img {
-  height: 28px;
+  height: 32px;
   width: auto;
+  filter: invert(1);
 }
 
 .header__logo h1 {
