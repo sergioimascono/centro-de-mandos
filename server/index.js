@@ -223,11 +223,21 @@ app.get('/api/projects/:slug/cards/next', async (req, res) => {
   }
 });
 
-// POST create new card
+// POST create new card (with optional AI fields)
 app.post('/api/projects/:slug/cards', async (req, res) => {
   try {
     const { slug } = req.params;
-    const { title, description = '', priority = 'medium', tags = [], column = 'backlog' } = req.body;
+    const {
+      title,
+      description = '',
+      priority = 'medium',
+      tags = [],
+      column = 'backlog',
+      // AI fields
+      ai_description = null,
+      acceptance_criteria = [],
+      linked_plan = null
+    } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -252,6 +262,11 @@ app.post('/api/projects/:slug/cards', async (req, res) => {
       created: now,
       updated: now
     };
+
+    // Add AI fields only if provided
+    if (ai_description) cardData.ai_description = ai_description;
+    if (acceptance_criteria.length > 0) cardData.acceptance_criteria = acceptance_criteria;
+    if (linked_plan) cardData.linked_plan = linked_plan;
 
     const fileContent = matter.stringify('', cardData);
     const filePath = path.join(columnPath, `${id}.md`);
