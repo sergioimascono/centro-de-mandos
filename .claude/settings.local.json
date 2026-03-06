@@ -34,7 +34,9 @@
       "Bash(git push:*)",
       "Bash(powershell -Command \"Stop-Process -Id 71492 -Force\")",
       "Bash(git restore:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 18420 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 18420 -Force\")",
+      "Bash(powershell -Command \"$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut\\([Environment]::GetFolderPath\\(''Startup''\\) + ''\\\\Centro de Mando.lnk''\\); $Shortcut.TargetPath = ''C:\\\\Users\\\\Sergio - Imascono\\\\Documents\\\\Escritor de Memorias Técnicas\\\\Centro de Mando Desarrollo\\\\start-server-silent.vbs''; $Shortcut.WorkingDirectory = ''C:\\\\Users\\\\Sergio - Imascono\\\\Documents\\\\Escritor de Memorias Técnicas\\\\Centro de Mando Desarrollo''; $Shortcut.Description = ''Centro de Mando - Servidor Kanban''; $Shortcut.Save\\(\\); Write-Host ''Acceso directo creado en:'' \\([Environment]::GetFolderPath\\(''Startup''\\)\\)\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)"
     ]
   }
 }
