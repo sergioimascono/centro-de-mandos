@@ -322,6 +322,36 @@ app.put('/api/projects/:slug/cards/:id', async (req, res) => {
   }
 });
 
+// PATCH update AI fields on card
+app.patch('/api/projects/:slug/cards/:id', async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const { ai_description, acceptance_criteria, linked_plan } = req.body;
+
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const cardInfo = await findCardFile(projectPath, id);
+
+    if (!cardInfo) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    const content = await fs.readFile(cardInfo.filePath, 'utf-8');
+    const { data, content: body } = matter(content);
+
+    // Update AI fields only if provided
+    if (ai_description !== undefined) data.ai_description = ai_description;
+    if (acceptance_criteria !== undefined) data.acceptance_criteria = acceptance_criteria;
+    if (linked_plan !== undefined) data.linked_plan = linked_plan;
+    data.updated = new Date().toISOString();
+
+    await fs.writeFile(cardInfo.filePath, matter.stringify(body, data));
+
+    res.json({ ...data, id, column: cardInfo.column });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // PUT move card to different column
 app.put('/api/projects/:slug/cards/:id/move', async (req, res) => {
   try {
