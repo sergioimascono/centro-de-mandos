@@ -48,6 +48,22 @@ const API = {
     });
   },
 
+  async archiveProject(slug) {
+    return this.request(`/projects/${slug}/archive`, {
+      method: 'POST',
+    });
+  },
+
+  async getArchivedProjects() {
+    return this.request('/archived');
+  },
+
+  async restoreProject(slug) {
+    return this.request(`/archived/${slug}/restore`, {
+      method: 'POST',
+    });
+  },
+
   // Cards
   async getCards(projectSlug) {
     return this.request(`/projects/${projectSlug}/cards`);
@@ -88,10 +104,20 @@ const API = {
 const State = {
   currentProject: null,
   projects: [],
+  archivedProjects: [],
   cards: [],
+  showArchived: false,
 
   setProjects(projects) {
     this.projects = projects;
+  },
+
+  setArchivedProjects(projects) {
+    this.archivedProjects = projects;
+  },
+
+  toggleShowArchived() {
+    this.showArchived = !this.showArchived;
   },
 
   setCurrentProject(project) {
@@ -145,40 +171,68 @@ function renderDashboard() {
     </div>
   `;
 
-  if (State.projects.length === 0) {
-    main.innerHTML = `
-      <div class="dashboard">
-        <div class="dashboard__header">
-          <h2 class="dashboard__title">Centro de Mando</h2>
-          <p class="dashboard__subtitle">Gestiona todos tus proyectos desde un solo lugar</p>
-        </div>
-        <div class="dashboard__grid">
-          ${newProjectCard}
-        </div>
-      </div>
-    `;
-    return;
-  }
-
   const projectCards = State.projects.map(project => {
     const stats = State.getProjectStats(project);
     return `
-      <div class="project-card" data-slug="${project.slug}" onclick="loadProject('${project.slug}')">
-        <h3 class="project-card__name">${project.name}</h3>
-        <p class="project-card__description">${project.description || 'Sin descripcion'}</p>
-        <div class="project-card__stats">
-          <span class="project-card__stat">
-            <i class="ph ph-cards"></i>
-            ${stats.total} tarjetas
-          </span>
-          <span class="project-card__stat">
-            <i class="ph ph-check-circle"></i>
-            ${stats.done} completadas
-          </span>
+      <div class="project-card" data-slug="${project.slug}">
+        <button class="project-card__archive" onclick="event.stopPropagation(); archiveProject('${project.slug}')" title="Archivar proyecto">
+          <i class="ph ph-archive"></i>
+        </button>
+        <div class="project-card__content" onclick="loadProject('${project.slug}')">
+          <h3 class="project-card__name">${project.name}</h3>
+          <p class="project-card__description">${project.description || 'Sin descripcion'}</p>
+          <div class="project-card__stats">
+            <span class="project-card__stat">
+              <i class="ph ph-cards"></i>
+              ${stats.total} tarjetas
+            </span>
+            <span class="project-card__stat">
+              <i class="ph ph-check-circle"></i>
+              ${stats.done} completadas
+            </span>
+          </div>
         </div>
       </div>
     `;
   }).join('');
+
+  const archivedCards = State.archivedProjects.map(project => {
+    const stats = State.getProjectStats(project);
+    return `
+      <div class="project-card project-card--archived" data-slug="${project.slug}">
+        <button class="project-card__restore" onclick="event.stopPropagation(); restoreProject('${project.slug}')" title="Restaurar proyecto">
+          <i class="ph ph-arrow-counter-clockwise"></i>
+        </button>
+        <div class="project-card__content">
+          <h3 class="project-card__name">${project.name}</h3>
+          <p class="project-card__description">${project.description || 'Sin descripcion'}</p>
+          <div class="project-card__stats">
+            <span class="project-card__stat">
+              <i class="ph ph-cards"></i>
+              ${stats.total} tarjetas
+            </span>
+            <span class="project-card__stat">
+              <i class="ph ph-archive"></i>
+              Archivado
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const archivedSection = State.archivedProjects.length > 0 ? `
+    <div class="dashboard__section">
+      <div class="dashboard__section-header" onclick="toggleArchived()">
+        <h3 class="dashboard__section-title">
+          <i class="ph ph-archive"></i>
+          Proyectos Archivados (${State.archivedProjects.length})
+        </h3>
+        <i class="ph ${State.showArchived ? 'ph-caret-up' : 'ph-caret-down'}"></i>
+      </div>
+      ${State.showArchived ? `<div class="dashboard__grid dashboard__grid--archived">${archivedCards}</div>` : ''}
+    </div>
+  ` : '';
 
   main.innerHTML = `
     <div class="dashboard">
@@ -190,6 +244,7 @@ function renderDashboard() {
         ${newProjectCard}
         ${projectCards}
       </div>
+      ${archivedSection}
     </div>
   `;
 }
@@ -498,13 +553,59 @@ async function loadDashboard() {
   showLoading();
 
   try {
-    const data = await API.getProjects();
-    State.setProjects(data.projects || []);
+    const [projectsData, archivedData] = await Promise.all([
+      API.getProjects(),
+      API.getArchivedProjects()
+    ]);
+    State.setProjects(projectsData.projects || []);
+    State.setArchivedProjects(archivedData.projects || []);
     renderDashboard();
   } catch (error) {
     showToast('Error al cargar proyectos', 'error');
     renderDashboard();
   }
+}
+
+async function archiveProject(slug) {
+  if (!confirm('¿Archivar este proyecto? Podras restaurarlo mas tarde.')) {
+    return;
+  }
+
+  try {
+    await API.archiveProject(slug);
+    // Move from projects to archived
+    const project = State.projects.find(p => p.slug === slug);
+    if (project) {
+      State.projects = State.projects.filter(p => p.slug !== slug);
+      State.archivedProjects.unshift({ ...project, archived: true });
+    }
+    renderDashboard();
+    showToast('Proyecto archivado', 'success');
+  } catch (error) {
+    showToast(error.message || 'Error al archivar', 'error');
+  }
+}
+
+async function restoreProject(slug) {
+  try {
+    await API.restoreProject(slug);
+    // Move from archived to projects
+    const project = State.archivedProjects.find(p => p.slug === slug);
+    if (project) {
+      State.archivedProjects = State.archivedProjects.filter(p => p.slug !== slug);
+      delete project.archived;
+      State.projects.unshift(project);
+    }
+    renderDashboard();
+    showToast('Proyecto restaurado', 'success');
+  } catch (error) {
+    showToast(error.message || 'Error al restaurar', 'error');
+  }
+}
+
+function toggleArchived() {
+  State.toggleShowArchived();
+  renderDashboard();
 }
 
 async function loadProject(slug) {
@@ -627,3 +728,6 @@ window.editCard = editCard;
 window.deleteCard = deleteCard;
 window.openProjectModal = openProjectModal;
 window.closeProjectModal = closeProjectModal;
+window.archiveProject = archiveProject;
+window.restoreProject = restoreProject;
+window.toggleArchived = toggleArchived;

@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 9500;
 const PROJECTS_DIR = path.join(__dirname, '../projects');
+const ARCHIVED_DIR = path.join(__dirname, '../archived');
 const COLUMNS = ['backlog', 'todo', 'in-progress', 'review', 'done'];
 
 // Middleware
@@ -302,6 +303,110 @@ app.put('/api/projects/:slug/cards/:id/move', async (req, res) => {
     await fs.unlink(cardInfo.filePath);
 
     res.json({ id, column: toColumn, updated: data.updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST archive project
+app.post('/api/projects/:slug/archive', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const archivedPath = path.join(ARCHIVED_DIR, slug);
+
+    // Check if project exists
+    try {
+      await fs.access(projectPath);
+    } catch {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Create archived directory if needed
+    await fs.mkdir(ARCHIVED_DIR, { recursive: true });
+
+    // Check if already archived
+    try {
+      await fs.access(archivedPath);
+      return res.status(409).json({ error: 'Project already archived with this name' });
+    } catch {
+      // Good - doesn't exist in archived
+    }
+
+    // Move project to archived
+    await fs.rename(projectPath, archivedPath);
+
+    res.json({ success: true, slug, message: 'Project archived' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET archived projects
+app.get('/api/archived', async (req, res) => {
+  try {
+    // Create archived directory if needed
+    await fs.mkdir(ARCHIVED_DIR, { recursive: true });
+
+    const entries = await fs.readdir(ARCHIVED_DIR, { withFileTypes: true });
+    const projects = [];
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const slug = entry.name;
+        const cardCount = {};
+
+        for (const column of COLUMNS) {
+          const columnPath = path.join(ARCHIVED_DIR, slug, column);
+          try {
+            const files = await fs.readdir(columnPath);
+            cardCount[column] = files.filter(f => f.endsWith('.md')).length;
+          } catch {
+            cardCount[column] = 0;
+          }
+        }
+
+        projects.push({
+          slug,
+          name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          cardCount,
+          archived: true
+        });
+      }
+    }
+
+    res.json({ projects });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST restore archived project
+app.post('/api/archived/:slug/restore', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const archivedPath = path.join(ARCHIVED_DIR, slug);
+    const projectPath = path.join(PROJECTS_DIR, slug);
+
+    // Check if archived project exists
+    try {
+      await fs.access(archivedPath);
+    } catch {
+      return res.status(404).json({ error: 'Archived project not found' });
+    }
+
+    // Check if active project with same name exists
+    try {
+      await fs.access(projectPath);
+      return res.status(409).json({ error: 'Active project with this name already exists' });
+    } catch {
+      // Good - doesn't exist in projects
+    }
+
+    // Move project back to projects
+    await fs.rename(archivedPath, projectPath);
+
+    res.json({ success: true, slug, message: 'Project restored' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
