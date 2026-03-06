@@ -37,21 +37,34 @@
   --color-column-review: #E8D4F7;
   --color-column-done: #D4F7E8;
 
-  /* Typography */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 2rem;
+  /* Typography - Imascono Design System */
+  --font-family: 'Visuelt Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
+  /* Font Weights */
   --font-weight-light: 300;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 700;
   --font-weight-black: 900;
+
+  /* Perfect Fourth Scale (1.333) - Imascono Design System */
+  --font-size-h1: 4.75rem;    /* 76px - Black */
+  --font-size-h2: 3.5rem;     /* 56px - Black */
+  --font-size-h3: 2.625rem;   /* 42px - Bold */
+  --font-size-h4: 2rem;       /* 32px - Bold */
+  --font-size-h5: 1.5rem;     /* 24px - Bold */
+  --font-size-h6: 1.125rem;   /* 18px - Bold */
+  --font-size-body: 1.125rem; /* 18px - Regular */
+  --font-size-small: 0.875rem; /* 14px - Regular */
+
+  /* Legacy size mappings for compatibility */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: var(--font-size-small);  /* 14px */
+  --font-size-base: var(--font-size-body); /* 18px */
+  --font-size-lg: var(--font-size-body);   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: var(--font-size-h5);    /* 24px */
+  --font-size-3xl: var(--font-size-h4);    /* 32px */
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -224,7 +237,7 @@ img {
 }
 
 .dashboard__title {
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-h2);
   font-weight: var(--font-weight-black);
   letter-spacing: -0.03em;
 }
