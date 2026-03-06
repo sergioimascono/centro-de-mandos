@@ -1,0 +1,285 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs').promises;
+const matter = require('gray-matter');
+const { v4: uuidv4 } = require('uuid');
+
+const app = express();
+const PORT = 9500;
+const PROJECTS_DIR = path.join(__dirname, '../projects');
+const COLUMNS = ['backlog', 'todo', 'in-progress', 'review', 'done'];
+
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// GET all projects
+app.get('/api/projects', async (req, res) => {
+  try {
+    const entries = await fs.readdir(PROJECTS_DIR, { withFileTypes: true });
+    const projects = [];
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const slug = entry.name;
+        const cardCount = {};
+
+        for (const column of COLUMNS) {
+          const columnPath = path.join(PROJECTS_DIR, slug, column);
+          try {
+            const files = await fs.readdir(columnPath);
+            cardCount[column] = files.filter(f => f.endsWith('.md')).length;
+          } catch {
+            cardCount[column] = 0;
+          }
+        }
+
+        projects.push({
+          slug,
+          name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          cardCount
+        });
+      }
+    }
+
+    res.json({ projects });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET single project
+app.get('/api/projects/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const projectPath = path.join(PROJECTS_DIR, slug);
+
+    try {
+      await fs.access(projectPath);
+    } catch {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const project = {
+      slug,
+      name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    };
+
+    res.json({ project });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET all cards for a project
+app.get('/api/projects/:slug/cards', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const projectPath = path.join(PROJECTS_DIR, slug);
+
+    try {
+      await fs.access(projectPath);
+    } catch {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const cards = [];
+
+    for (const column of COLUMNS) {
+      const columnPath = path.join(projectPath, column);
+
+      try {
+        const files = await fs.readdir(columnPath);
+        let position = 0;
+
+        for (const file of files) {
+          if (file.endsWith('.md')) {
+            const filePath = path.join(columnPath, file);
+            const content = await fs.readFile(filePath, 'utf-8');
+            const { data, content: body } = matter(content);
+            cards.push({
+              ...data,
+              column,
+              position,
+              body,
+              filename: file
+            });
+            position++;
+          }
+        }
+      } catch {
+        // Column doesn't exist, skip
+      }
+    }
+
+    res.json({ cards });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST create new card
+app.post('/api/projects/:slug/cards', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { title, description = '', priority = 'medium', tags = [], column = 'backlog' } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    if (!COLUMNS.includes(column)) {
+      return res.status(400).json({ error: 'Invalid column' });
+    }
+
+    const id = uuidv4().slice(0, 8);
+    const now = new Date().toISOString();
+    const columnPath = path.join(PROJECTS_DIR, slug, column);
+
+    await fs.mkdir(columnPath, { recursive: true });
+
+    const cardData = {
+      id,
+      title,
+      description,
+      priority,
+      tags,
+      created: now,
+      updated: now
+    };
+
+    const fileContent = matter.stringify('', cardData);
+    const filePath = path.join(columnPath, `${id}.md`);
+
+    await fs.writeFile(filePath, fileContent);
+
+    res.status(201).json({ ...cardData, column });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper: find card file across columns
+async function findCardFile(projectPath, cardId) {
+  for (const column of COLUMNS) {
+    const columnPath = path.join(projectPath, column);
+    try {
+      const files = await fs.readdir(columnPath);
+      const file = files.find(f => f.startsWith(cardId) && f.endsWith('.md'));
+      if (file) {
+        return { column, filePath: path.join(columnPath, file), filename: file };
+      }
+    } catch {
+      // Column doesn't exist
+    }
+  }
+  return null;
+}
+
+// PUT update card
+app.put('/api/projects/:slug/cards/:id', async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const { title, description, priority, tags, column } = req.body;
+
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const cardInfo = await findCardFile(projectPath, id);
+
+    if (!cardInfo) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    const content = await fs.readFile(cardInfo.filePath, 'utf-8');
+    const { data, content: body } = matter(content);
+
+    // Update fields
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (priority !== undefined) data.priority = priority;
+    if (tags !== undefined) data.tags = tags;
+    data.updated = new Date().toISOString();
+
+    // If column changed, move the file
+    if (column && column !== cardInfo.column && COLUMNS.includes(column)) {
+      const newColumnPath = path.join(projectPath, column);
+      await fs.mkdir(newColumnPath, { recursive: true });
+      const newFilePath = path.join(newColumnPath, cardInfo.filename);
+      await fs.writeFile(newFilePath, matter.stringify(body, data));
+      await fs.unlink(cardInfo.filePath);
+
+      res.json({ ...data, id, column });
+    } else {
+      await fs.writeFile(cardInfo.filePath, matter.stringify(body, data));
+      res.json({ ...data, id, column: cardInfo.column });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT move card to different column
+app.put('/api/projects/:slug/cards/:id/move', async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const { column: toColumn, position } = req.body;
+
+    if (!COLUMNS.includes(toColumn)) {
+      return res.status(400).json({ error: 'Invalid target column' });
+    }
+
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const cardInfo = await findCardFile(projectPath, id);
+
+    if (!cardInfo) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    if (cardInfo.column === toColumn) {
+      return res.json({ id, column: toColumn, message: 'Card already in this column' });
+    }
+
+    const content = await fs.readFile(cardInfo.filePath, 'utf-8');
+    const { data, content: body } = matter(content);
+
+    data.updated = new Date().toISOString();
+
+    const newColumnPath = path.join(projectPath, toColumn);
+    await fs.mkdir(newColumnPath, { recursive: true });
+    const newFilePath = path.join(newColumnPath, cardInfo.filename);
+    await fs.writeFile(newFilePath, matter.stringify(body, data));
+
+    await fs.unlink(cardInfo.filePath);
+
+    res.json({ id, column: toColumn, updated: data.updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE card
+app.delete('/api/projects/:slug/cards/:id', async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const cardInfo = await findCardFile(projectPath, id);
+
+    if (!cardInfo) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    await fs.unlink(cardInfo.filePath);
+    res.json({ success: true, id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Centro de Mando running at http://localhost:${PORT}`);
+});

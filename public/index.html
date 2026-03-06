@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Mando | Imascono</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header__logo">
+      <img src="/assets/logo-imascono.png" alt="Imascono" class="header__logo-img">
+      <h1>Centro de Mando</h1>
+    </div>
+    <nav class="header__nav" id="projectNav"></nav>
+  </header>
+
+  <main class="main" id="main">
+    <!-- Content loaded dynamically -->
+  </main>
+
+  <div class="modal" id="cardModal">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 id="modalTitle">Nueva Tarjeta</h3>
+        <button class="btn btn--icon" id="modalClose">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <form id="cardForm" class="form">
+        <input type="hidden" id="cardId">
+        <input type="hidden" id="cardColumn">
+
+        <div class="form__group">
+          <label for="cardTitle">Titulo *</label>
+          <input type="text" id="cardTitle" required>
+        </div>
+
+        <div class="form__group">
+          <label for="cardDescription">Descripcion</label>
+          <textarea id="cardDescription" rows="3"></textarea>
+        </div>
+
+        <div class="form__row">
+          <div class="form__group">
+            <label for="cardPriority">Prioridad</label>
+            <select id="cardPriority">
+              <option value="low">Baja</option>
+              <option value="medium" selected>Media</option>
+              <option value="high">Alta</option>
+              <option value="critical">Critica</option>
+            </select>
+          </div>
+
+          <div class="form__group">
+            <label for="cardTags">Tags (separados por coma)</label>
+            <input type="text" id="cardTags" placeholder="frontend, bug">
+          </div>
+        </div>
+
+        <div class="form__actions">
+          <button type="button" class="btn btn--secondary" id="cancelBtn">Cancelar</button>
+          <button type="submit" class="btn btn--primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

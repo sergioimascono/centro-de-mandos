@@ -1,0 +1,18 @@
+{
+  "name": "centro-de-mando",
+  "version": "1.0.0",
+  "description": "Dashboard Kanban para gestionar proyectos de Claude Code",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": ["kanban", "claude-code", "dashboard", "imascono"],
+  "author": "Imascono",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.18.2",
+    "gray-matter": "^4.0.3",
+    "uuid": "^9.0.0"
+  }
+}

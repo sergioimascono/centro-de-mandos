@@ -1,0 +1,27 @@
+# progress.txt
+
+## Last Updated
+2026-03-06
+
+## Current Step
+Implementation complete
+
+## Completed
+- [x] Documentation (PRD, TECH_STACK, etc.)
+- [x] Folder structure for Kanban
+- [x] Backend API (Express + gray-matter)
+- [x] Frontend dashboard (HTML/CSS/JS vanilla)
+- [x] Drag & drop between columns
+- [x] Create/edit cards modal
+- [x] Skill for Claude Code integration
+- [x] Integration documentation
+
+## In Progress
+- [ ] Testing and polish
+
+## Next Up
+- [ ] Add more projects
+- [ ] Polish and refinements
+
+## Notes
+Server runs on port 9500. Start with `npm start`.

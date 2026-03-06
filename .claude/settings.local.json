@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(node:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__navigate_page",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq node*\")",
+      "Bash(taskkill:*)",
+      "Bash(wmic process where \"name=''node.exe''\" get processid,commandline)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd /c \"taskkill /F /PID 38040\")",
+      "Bash(powershell -Command \"Stop-Process -Id 38040 -Force\")",
+      "mcp__chrome-devtools__list_pages",
+      "Bash(start http://localhost:9500)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

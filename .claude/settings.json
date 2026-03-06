@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "project": {
+    "name": "[PROJECT_NAME]",
+    "type": "[web|mobile|game|api|library]"
+  },
+  "agents": {
+    "default": "implementer",
+    "available": ["researcher", "implementer", "reviewer", "planner"]
+  },
+  "commands": {
+    "available": ["plan", "review", "test", "status", "wrap-up", "learn"]
+  },
+  "contexts": {
+    "default": "dev",
+    "available": ["dev", "review", "research"]
+  },
+  "skills": {
+    "available": ["code-review", "pro-workflow"]
+  },
+  "backpressure": {
+    "levels": [
+      {
+        "name": "typecheck",
+        "command": "npm run typecheck",
+        "required": true
+      },
+      {
+        "name": "lint",
+        "command": "npm run lint",
+        "required": true
+      },
+      {
+        "name": "test",
+        "command": "npm test",
+        "required": true
+      },
+      {
+        "name": "build",
+        "command": "npm run build",
+        "required": true
+      },
+      {
+        "name": "review",
+        "command": "/review staged",
+        "required": false
+      }
+    ]
+  },
+  "mcp": {
+    "playwright": {
+      "enabled": true,
+      "baseUrl": "http://localhost:3000"
+    }
+  },
+  "preferences": {
+    "planModeThreshold": 3,
+    "useSubagents": true,
+    "autoCommit": false,
+    "requireTestsBeforeCommit": true,
+    "wrapUpReminder": true,
+    "selfCorrectionLoop": true
+  }
+}
