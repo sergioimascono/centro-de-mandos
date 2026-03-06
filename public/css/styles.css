@@ -289,6 +289,49 @@ img {
   font-size: var(--font-size-sm);
 }
 
+/* New Project Card */
+.project-card--new {
+  border: 2px dashed var(--color-border);
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 160px;
+}
+
+.project-card--new:hover {
+  border-color: var(--color-black);
+  background-color: var(--color-surface);
+}
+
+.project-card__new-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-2xl);
+  color: var(--color-gray-dark);
+  transition: all var(--transition-fast);
+}
+
+.project-card--new:hover .project-card__new-icon {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.project-card--new .project-card__name {
+  margin-bottom: var(--space-xs);
+}
+
+.project-card--new .project-card__description {
+  margin-bottom: 0;
+}
+
 /* ============================================
    KANBAN BOARD
    ============================================ */

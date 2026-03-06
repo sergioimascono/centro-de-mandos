@@ -41,6 +41,13 @@ const API = {
     return this.request(`/projects/${slug}`);
   },
 
+  async createProject(name) {
+    return this.request('/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
   // Cards
   async getCards(projectSlug) {
     return this.request(`/projects/${projectSlug}/cards`);
@@ -128,6 +135,16 @@ const COLUMNS = [
 function renderDashboard() {
   const main = document.getElementById('main');
 
+  const newProjectCard = `
+    <div class="project-card project-card--new" onclick="openProjectModal()">
+      <div class="project-card__new-icon">
+        <i class="ph ph-plus"></i>
+      </div>
+      <h3 class="project-card__name">Nuevo Proyecto</h3>
+      <p class="project-card__description">Crear un nuevo tablero Kanban</p>
+    </div>
+  `;
+
   if (State.projects.length === 0) {
     main.innerHTML = `
       <div class="dashboard">
@@ -135,10 +152,8 @@ function renderDashboard() {
           <h2 class="dashboard__title">Centro de Mando</h2>
           <p class="dashboard__subtitle">Gestiona todos tus proyectos desde un solo lugar</p>
         </div>
-        <div class="empty-state">
-          <i class="ph ph-folder-notch-open empty-state__icon"></i>
-          <h3 class="empty-state__title">No hay proyectos</h3>
-          <p class="empty-state__text">Crea carpetas de proyecto en el directorio data/ para comenzar</p>
+        <div class="dashboard__grid">
+          ${newProjectCard}
         </div>
       </div>
     `;
@@ -172,6 +187,7 @@ function renderDashboard() {
         <p class="dashboard__subtitle">Gestiona todos tus proyectos desde un solo lugar</p>
       </div>
       <div class="dashboard__grid">
+        ${newProjectCard}
         ${projectCards}
       </div>
     </div>
@@ -435,6 +451,43 @@ async function deleteCard(cardId) {
 }
 
 // ============================================
+// PROJECT MODAL HANDLERS
+// ============================================
+
+function openProjectModal() {
+  const modal = document.getElementById('projectModal');
+  document.getElementById('projectForm').reset();
+  modal.classList.add('active');
+  document.getElementById('projectName').focus();
+}
+
+function closeProjectModal() {
+  const modal = document.getElementById('projectModal');
+  modal.classList.remove('active');
+}
+
+async function handleProjectFormSubmit(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('projectName').value.trim();
+
+  if (!name) {
+    showToast('El nombre es obligatorio', 'error');
+    return;
+  }
+
+  try {
+    const newProject = await API.createProject(name);
+    State.projects.unshift(newProject);
+    closeProjectModal();
+    renderDashboard();
+    showToast('Proyecto creado', 'success');
+  } catch (error) {
+    showToast(error.message || 'Error al crear proyecto', 'error');
+  }
+}
+
+// ============================================
 // NAVIGATION
 // ============================================
 
@@ -534,18 +587,27 @@ function showLoading() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Form submission
+  // Card form submission
   document.getElementById('cardForm').addEventListener('submit', handleFormSubmit);
 
-  // Modal close handlers
+  // Card modal close handlers
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('cancelBtn').addEventListener('click', closeModal);
-  document.querySelector('.modal__backdrop').addEventListener('click', closeModal);
+  document.querySelector('#cardModal .modal__backdrop').addEventListener('click', closeModal);
 
-  // Escape key to close modal
+  // Project form submission
+  document.getElementById('projectForm').addEventListener('submit', handleProjectFormSubmit);
+
+  // Project modal close handlers
+  document.getElementById('projectModalClose').addEventListener('click', closeProjectModal);
+  document.getElementById('projectCancelBtn').addEventListener('click', closeProjectModal);
+  document.querySelector('#projectModal .modal__backdrop').addEventListener('click', closeProjectModal);
+
+  // Escape key to close modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeModal();
+      closeProjectModal();
     }
   });
 
@@ -563,3 +625,5 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.editCard = editCard;
 window.deleteCard = deleteCard;
+window.openProjectModal = openProjectModal;
+window.closeProjectModal = closeProjectModal;

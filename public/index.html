@@ -71,6 +71,28 @@
     </div>
   </div>
 
+  <div class="modal" id="projectModal">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3>Nuevo Proyecto</h3>
+        <button class="btn btn--icon" id="projectModalClose">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <form id="projectForm" class="form">
+        <div class="form__group">
+          <label for="projectName">Nombre del Proyecto *</label>
+          <input type="text" id="projectName" placeholder="Mi Nuevo Proyecto" required>
+        </div>
+        <div class="form__actions">
+          <button type="button" class="btn btn--secondary" id="projectCancelBtn">Cancelar</button>
+          <button type="submit" class="btn btn--primary">Crear Proyecto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script src="/js/app.js"></script>

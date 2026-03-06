@@ -53,6 +53,52 @@ app.get('/api/projects', async (req, res) => {
   }
 });
 
+// POST create new project
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Project name is required' });
+    }
+
+    // Generate slug from name
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Invalid project name' });
+    }
+
+    const projectPath = path.join(PROJECTS_DIR, slug);
+
+    // Check if already exists
+    try {
+      await fs.access(projectPath);
+      return res.status(409).json({ error: 'Project already exists' });
+    } catch {
+      // Good - doesn't exist
+    }
+
+    // Create project folder with all columns
+    for (const column of COLUMNS) {
+      await fs.mkdir(path.join(projectPath, column), { recursive: true });
+    }
+
+    res.status(201).json({
+      slug,
+      name: name.trim(),
+      cardCount: { backlog: 0, todo: 0, 'in-progress': 0, review: 0, done: 0 }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET single project
 app.get('/api/projects/:slug', async (req, res) => {
   try {
