@@ -123,10 +123,11 @@ app.get('/api/projects/:slug', async (req, res) => {
   }
 });
 
-// GET all cards for a project
+// GET all cards for a project (with optional column filter)
 app.get('/api/projects/:slug/cards', async (req, res) => {
   try {
     const { slug } = req.params;
+    const { column: filterColumn } = req.query;
     const projectPath = path.join(PROJECTS_DIR, slug);
 
     try {
@@ -136,8 +137,11 @@ app.get('/api/projects/:slug/cards', async (req, res) => {
     }
 
     const cards = [];
+    const columnsToScan = filterColumn && COLUMNS.includes(filterColumn)
+      ? [filterColumn]
+      : COLUMNS;
 
-    for (const column of COLUMNS) {
+    for (const column of columnsToScan) {
       const columnPath = path.join(projectPath, column);
 
       try {
