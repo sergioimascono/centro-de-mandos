@@ -174,6 +174,55 @@ app.get('/api/projects/:slug/cards', async (req, res) => {
   }
 });
 
+// GET next suggested card from backlog
+app.get('/api/projects/:slug/cards/next', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const projectPath = path.join(PROJECTS_DIR, slug);
+    const backlogPath = path.join(projectPath, 'backlog');
+
+    try {
+      await fs.access(projectPath);
+    } catch {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const cards = [];
+
+    try {
+      const files = await fs.readdir(backlogPath);
+
+      for (const file of files) {
+        if (file.endsWith('.md')) {
+          const filePath = path.join(backlogPath, file);
+          const content = await fs.readFile(filePath, 'utf-8');
+          const { data } = matter(content);
+          cards.push({ ...data, filename: file });
+        }
+      }
+    } catch {
+      return res.json({ card: null, message: 'No cards in backlog' });
+    }
+
+    if (cards.length === 0) {
+      return res.json({ card: null, message: 'No cards in backlog' });
+    }
+
+    // Sort by priority (critical > high > medium > low) then by created date
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    cards.sort((a, b) => {
+      const pA = priorityOrder[a.priority] ?? 2;
+      const pB = priorityOrder[b.priority] ?? 2;
+      if (pA !== pB) return pA - pB;
+      return new Date(a.created) - new Date(b.created);
+    });
+
+    res.json({ card: cards[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST create new card
 app.post('/api/projects/:slug/cards', async (req, res) => {
   try {
