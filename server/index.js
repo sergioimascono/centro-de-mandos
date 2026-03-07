@@ -391,6 +391,52 @@ app.put('/api/projects/:slug/cards/:id/move', async (req, res) => {
     const content = await fs.readFile(cardInfo.filePath, 'utf-8');
     const { data, content: body } = matter(content);
 
+    // Workflow validation: moving to in-progress requires AI fields
+    if (toColumn === 'in-progress') {
+      const missingFields = [];
+      if (!data.ai_description) missingFields.push('ai_description (plan de implementacion)');
+      if (!data.acceptance_criteria || data.acceptance_criteria.length === 0) {
+        missingFields.push('acceptance_criteria (criterios de aceptacion)');
+      }
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          error: 'Campos IA requeridos para mover a En Progreso',
+          missing_fields: missingFields,
+          requires_ai_fields: true,
+          card_id: id
+        });
+      }
+    }
+
+    // Workflow validation: moving to done requires all acceptance criteria completed
+    if (toColumn === 'done') {
+      if (!data.acceptance_criteria || data.acceptance_criteria.length === 0) {
+        return res.status(400).json({
+          error: 'La tarjeta debe tener criterios de aceptacion antes de completarse',
+          requires_acceptance_criteria: true,
+          card_id: id
+        });
+      }
+
+      // Check if all acceptance criteria are marked as completed
+      const hasUncompletedCriteria = data.acceptance_criteria.some(criteria => {
+        if (typeof criteria === 'object') {
+          return !criteria.completed;
+        }
+        return true; // String criteria are considered not completed
+      });
+
+      if (hasUncompletedCriteria) {
+        return res.status(400).json({
+          error: 'Todos los criterios de aceptacion deben estar cumplidos',
+          requires_completed_criteria: true,
+          acceptance_criteria: data.acceptance_criteria,
+          card_id: id
+        });
+      }
+    }
+
     data.updated = new Date().toISOString();
 
     const newColumnPath = path.join(projectPath, toColumn);

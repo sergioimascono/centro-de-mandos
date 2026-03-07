@@ -306,6 +306,30 @@ function renderCard(card) {
     ? card.tags.map(tag => `<span class="card__tag">${tag}</span>`).join('')
     : '';
 
+  // AI fields - simplified view (just badge with count)
+  const hasAiFields = card.ai_description || (card.acceptance_criteria && card.acceptance_criteria.length > 0) || card.linked_plan;
+
+  let criteriaCount = 0;
+  let criteriaCompleted = 0;
+  if (card.acceptance_criteria && card.acceptance_criteria.length > 0) {
+    criteriaCount = card.acceptance_criteria.length;
+    criteriaCompleted = card.acceptance_criteria.filter(c => {
+      if (typeof c === 'object') return c.completed;
+      if (typeof c === 'string') return c.startsWith('[x] ') || c.startsWith('[X] ');
+      return false;
+    }).length;
+  }
+
+  const aiBadge = hasAiFields
+    ? `<span class="card__ai-badge" title="Tiene campos IA"><i class="ph ph-robot"></i></span>`
+    : '';
+
+  const criteriaIndicator = criteriaCount > 0
+    ? `<span class="card__criteria-count ${criteriaCompleted === criteriaCount ? 'card__criteria-count--done' : ''}" title="${criteriaCompleted}/${criteriaCount} criterios completados">
+        <i class="ph ph-check-square"></i> ${criteriaCompleted}/${criteriaCount}
+      </span>`
+    : '';
+
   return `
     <div class="card card--priority-${card.priority}" draggable="true" data-card-id="${card.id}">
       <div class="card__header">
@@ -322,6 +346,10 @@ function renderCard(card) {
       ${card.description ? `<p class="card__description">${card.description}</p>` : ''}
       <div class="card__footer">
         <div class="card__tags">${tagsHtml}</div>
+        <div class="card__indicators">
+          ${aiBadge}
+          ${criteriaIndicator}
+        </div>
         <span class="card__priority card__priority--${card.priority}">${priorityLabels[card.priority]}</span>
       </div>
     </div>
@@ -396,7 +424,14 @@ function setupDragAndDrop() {
         renderKanban();
         showToast('Tarjeta movida', 'success');
       } catch (error) {
-        showToast('Error al mover tarjeta', 'error');
+        // Handle workflow validation errors
+        if (error.message.includes('Campos IA requeridos')) {
+          showToast('Faltan campos IA: plan y criterios de aceptacion', 'error');
+        } else if (error.message.includes('criterios de aceptacion')) {
+          showToast('Completa los criterios de aceptacion primero', 'error');
+        } else {
+          showToast(error.message || 'Error al mover tarjeta', 'error');
+        }
       }
     });
   });
@@ -410,11 +445,18 @@ function openModal(column = 'backlog', cardData = null) {
   const modal = document.getElementById('cardModal');
   const form = document.getElementById('cardForm');
   const title = document.getElementById('modalTitle');
+  const aiSection = document.getElementById('aiFieldsSection');
+  const criteriaList = document.getElementById('acceptanceCriteriaList');
 
   // Reset form
   form.reset();
   document.getElementById('cardId').value = '';
   document.getElementById('cardColumn').value = column;
+  document.getElementById('cardAiDescription').value = '';
+  document.getElementById('cardLinkedPlan').value = '';
+  criteriaList.innerHTML = '';
+  aiSection.style.display = 'none';
+  currentCardCriteria = [];
 
   if (cardData) {
     // Edit mode
@@ -425,6 +467,45 @@ function openModal(column = 'backlog', cardData = null) {
     document.getElementById('cardDescription').value = cardData.description || '';
     document.getElementById('cardPriority').value = cardData.priority;
     document.getElementById('cardTags').value = (cardData.tags || []).join(', ');
+
+    // AI fields
+    const hasAiFields = cardData.ai_description ||
+      (cardData.acceptance_criteria && cardData.acceptance_criteria.length > 0) ||
+      cardData.linked_plan;
+
+    if (hasAiFields) {
+      aiSection.style.display = 'block';
+      document.getElementById('cardAiDescription').value = cardData.ai_description || '';
+      document.getElementById('cardLinkedPlan').value = cardData.linked_plan || '';
+
+      // Render acceptance criteria with checkboxes
+      if (cardData.acceptance_criteria && cardData.acceptance_criteria.length > 0) {
+        currentCardCriteria = [...cardData.acceptance_criteria];
+        criteriaList.innerHTML = cardData.acceptance_criteria.map((criteria, index) => {
+          const isObject = typeof criteria === 'object';
+          let text = isObject ? criteria.text : criteria;
+          let completed = isObject ? criteria.completed : false;
+
+          // Parse markdown-style checkboxes
+          if (typeof text === 'string') {
+            if (text.startsWith('[x] ') || text.startsWith('[X] ')) {
+              completed = true;
+              text = text.substring(4);
+            } else if (text.startsWith('[ ] ')) {
+              completed = false;
+              text = text.substring(4);
+            }
+          }
+
+          return `
+            <div class="criteria-item">
+              <input type="checkbox" id="criteria_${index}" ${completed ? 'checked' : ''} onchange="updateCriteriaState(${index}, this.checked)">
+              <label for="criteria_${index}">${text}</label>
+            </div>
+          `;
+        }).join('');
+      }
+    }
   } else {
     // Create mode
     title.textContent = 'Nueva Tarjeta';
@@ -464,9 +545,21 @@ async function handleFormSubmit(e) {
     if (cardId) {
       // Update existing card
       await API.updateCard(State.currentProject.slug, cardId, cardData);
+
+      // Update AI fields if they were modified
+      if (currentCardCriteria.length > 0) {
+        await API.request(`/projects/${State.currentProject.slug}/cards/${cardId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ acceptance_criteria: currentCardCriteria }),
+        });
+      }
+
       const cardIndex = State.cards.findIndex(c => c.id === cardId);
       if (cardIndex !== -1) {
         State.cards[cardIndex] = { ...State.cards[cardIndex], ...cardData };
+        if (currentCardCriteria.length > 0) {
+          State.cards[cardIndex].acceptance_criteria = currentCardCriteria;
+        }
       }
       showToast('Tarjeta actualizada', 'success');
     } else {
@@ -502,6 +595,77 @@ async function deleteCard(cardId) {
     showToast('Tarjeta eliminada', 'success');
   } catch (error) {
     showToast('Error al eliminar tarjeta', 'error');
+  }
+}
+
+// Track criteria state changes in modal
+let currentCardCriteria = [];
+
+function updateCriteriaState(index, completed) {
+  if (currentCardCriteria[index]) {
+    if (typeof currentCardCriteria[index] === 'object') {
+      currentCardCriteria[index].completed = completed;
+    } else {
+      let text = currentCardCriteria[index];
+      // Remove old prefix
+      if (text.startsWith('[x] ') || text.startsWith('[X] ')) {
+        text = text.substring(4);
+      } else if (text.startsWith('[ ] ')) {
+        text = text.substring(4);
+      }
+      currentCardCriteria[index] = { text, completed };
+    }
+  }
+}
+
+async function toggleCriteria(cardId, criteriaIndex) {
+  const card = State.cards.find(c => c.id === cardId);
+  if (!card || !card.acceptance_criteria) return;
+
+  // Convert to object format if needed and toggle
+  const criteria = card.acceptance_criteria[criteriaIndex];
+  let updatedCriteria;
+
+  if (typeof criteria === 'object') {
+    updatedCriteria = { ...criteria, completed: !criteria.completed };
+  } else {
+    // Handle markdown-style checkboxes: "[ ] text" or "[x] text"
+    let text = criteria;
+    let wasCompleted = false;
+
+    if (text.startsWith('[x] ') || text.startsWith('[X] ')) {
+      wasCompleted = true;
+      text = text.substring(4);
+    } else if (text.startsWith('[ ] ')) {
+      wasCompleted = false;
+      text = text.substring(4);
+    }
+
+    updatedCriteria = { text: text, completed: !wasCompleted };
+  }
+
+  card.acceptance_criteria[criteriaIndex] = updatedCriteria;
+
+  try {
+    await API.request(`/projects/${State.currentProject.slug}/cards/${cardId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ acceptance_criteria: card.acceptance_criteria }),
+    });
+
+    renderKanban();
+
+    const allCompleted = card.acceptance_criteria.every(c => {
+      if (typeof c === 'object') return c.completed;
+      if (typeof c === 'string') {
+        return c.startsWith('[x] ') || c.startsWith('[X] ');
+      }
+      return false;
+    });
+    if (allCompleted) {
+      showToast('Todos los criterios completados', 'success');
+    }
+  } catch (error) {
+    showToast('Error al actualizar criterio', 'error');
   }
 }
 
@@ -731,3 +895,5 @@ window.closeProjectModal = closeProjectModal;
 window.archiveProject = archiveProject;
 window.restoreProject = restoreProject;
 window.toggleArchived = toggleArchived;
+window.toggleCriteria = toggleCriteria;
+window.updateCriteriaState = updateCriteriaState;

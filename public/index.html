@@ -63,6 +63,26 @@
           </div>
         </div>
 
+        <!-- AI Fields Section -->
+        <div class="form__ai-section" id="aiFieldsSection" style="display: none;">
+          <h4><i class="ph ph-robot"></i> Campos IA</h4>
+
+          <div class="form__group">
+            <label for="cardAiDescription">Plan de Implementacion</label>
+            <textarea id="cardAiDescription" rows="3" placeholder="Descripcion generada por IA..."></textarea>
+          </div>
+
+          <div class="form__group">
+            <label>Criterios de Aceptacion</label>
+            <div id="acceptanceCriteriaList" class="criteria-list"></div>
+          </div>
+
+          <div class="form__group">
+            <label for="cardLinkedPlan">Plan Vinculado</label>
+            <input type="text" id="cardLinkedPlan" placeholder="docs/plans/...">
+          </div>
+        </div>
+
         <div class="form__actions">
           <button type="button" class="btn btn--secondary" id="cancelBtn">Cancelar</button>
           <button type="submit" class="btn btn--primary">Guardar</button>

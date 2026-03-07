@@ -680,6 +680,28 @@ img {
   color: var(--color-white);
 }
 
+/* Card indicators (simplified view) */
+.card__indicators {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.card__criteria-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--space-sm);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.card__criteria-count--done {
+  background-color: var(--color-column-done);
+  color: var(--color-black);
+}
+
 /* ============================================
    MODAL
    ============================================ */
@@ -1123,6 +1145,25 @@ img {
   left: 0;
 }
 
+.card__acceptance-criteria li.card__criteria--completed::before {
+  content: '☑';
+  color: var(--color-column-done);
+}
+
+.card__acceptance-criteria li.card__criteria--completed {
+  text-decoration: line-through;
+  color: var(--color-gray-medium);
+}
+
+.card__acceptance-criteria li {
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.card__acceptance-criteria li:hover {
+  background-color: var(--color-surface);
+}
+
 .card__linked-plan {
   margin-top: var(--space-sm);
   font-size: var(--font-size-xs);
@@ -1147,4 +1188,56 @@ img {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+}
+
+/* Form AI Section */
+.form__ai-section {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.form__ai-section h4 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-magenta);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Criteria list in modal */
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-sm);
+  background-color: var(--color-surface);
+}
+
+.criteria-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+
+.criteria-item input[type="checkbox"] {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.criteria-item label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  flex: 1;
+}
+
+.criteria-item input[type="checkbox"]:checked + label {
+  text-decoration: line-through;
+  color: var(--color-text-secondary);
 }
