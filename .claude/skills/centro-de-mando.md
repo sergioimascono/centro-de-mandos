@@ -86,6 +86,21 @@ curl -X PUT $SERVER/api/projects/$PROJECT/cards/$CARD_ID/move \
   -d '{"column": "review"}'
 ```
 
+### /task mark-criteria <índice>
+Marca un criterio de aceptación como completado.
+
+**Comportamiento:**
+1. Obtiene criterios actuales de la tarjeta
+2. Cambia el criterio indicado a `completed: true`
+3. Actualiza vía PATCH
+
+**API Call:**
+```bash
+curl -X PATCH $SERVER/api/projects/$PROJECT/cards/$CARD_ID \
+  -H "Content-Type: application/json" \
+  -d '{"acceptance_criteria": [{"text": "...", "completed": true}]}'
+```
+
 ### /task verify
 Verifica criterios de aceptación.
 
@@ -174,6 +189,40 @@ curl -s http://localhost:9500/api/projects | jq '.projects[].slug'
 - Antes de /task done: `superpowers:verification-before-completion`
 - Si se crea plan: actualizar `linked_plan`
 
+## Validación de Workflow
+
+El servidor valida las transiciones de columna:
+
+### Mover a in-progress (requiere campos IA)
+```
+Error: "Campos IA requeridos para mover a En Progreso"
+missing_fields: ["ai_description", "acceptance_criteria"]
+```
+
+**Antes de mover, rellenar:**
+```bash
+curl -X PATCH $SERVER/api/projects/$PROJECT/cards/$CARD_ID \
+  -d '{
+    "ai_description": "Plan de implementación generado por Claude...",
+    "acceptance_criteria": [
+      {"text": "Criterio verificable 1", "completed": false},
+      {"text": "Criterio verificable 2", "completed": false}
+    ]
+  }'
+```
+
+### Mover a done (requiere criterios completados)
+```
+Error: "Todos los criterios de aceptacion deben estar cumplidos"
+requires_completed_criteria: true
+```
+
+**Antes de mover, completar criterios:**
+```bash
+curl -X PATCH $SERVER/api/projects/$PROJECT/cards/$CARD_ID \
+  -d '{"acceptance_criteria": [{"text": "...", "completed": true}]}'
+```
+
 ## Estado Interno
 
 El skill mantiene estado de la tarjeta actual en memoria:
@@ -183,3 +232,12 @@ El skill mantiene estado de la tarjeta actual en memoria:
 
 Este estado se pierde al cerrar la sesión. Al reiniciar, el skill
 detecta tarjetas en `in-progress` y pregunta si continuar.
+
+## Versionado
+
+**Versión actual: 1.1.0** (2026-03-07)
+
+Cambios recientes:
+- Validación de campos IA al mover a in-progress
+- Bloqueo de done sin criterios completados
+- Criterios como objetos {text, completed}

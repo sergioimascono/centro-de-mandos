@@ -14,9 +14,27 @@ const COLUMNS = ['backlog', 'todo', 'in-progress', 'review', 'done'];
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Version info
+const VERSION = '1.1.0';
+const VERSION_DATE = '2026-03-07';
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Version endpoint - for other projects to check compatibility
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: VERSION,
+    date: VERSION_DATE,
+    breaking_changes: [
+      'acceptance_criteria debe ser array de objetos {text, completed}',
+      'PUT /move valida campos IA antes de mover a in-progress',
+      'PUT /move requiere criterios completados para mover a done'
+    ],
+    changelog_url: '/CHANGELOG.md'
+  });
 });
 
 // GET all projects

@@ -66,6 +66,50 @@ Proyectos disponibles:
    (seleccionar)      (implementar)       (completar)        (verificar)
 ```
 
+## Validación de Workflow (IMPORTANTE)
+
+El Centro de Mando valida las transiciones de columna:
+
+### → En Progreso (requiere campos IA)
+```json
+{
+  "error": "Campos IA requeridos para mover a En Progreso",
+  "missing_fields": ["ai_description", "acceptance_criteria"],
+  "requires_ai_fields": true
+}
+```
+
+**Solución:** Claude Code debe rellenar estos campos antes de mover:
+```bash
+curl -X PATCH /api/projects/:slug/cards/:id \
+  -d '{
+    "ai_description": "Plan de implementación...",
+    "acceptance_criteria": [
+      {"text": "Criterio 1", "completed": false},
+      {"text": "Criterio 2", "completed": false}
+    ]
+  }'
+```
+
+### → Done (requiere criterios completados)
+```json
+{
+  "error": "Todos los criterios de aceptacion deben estar cumplidos",
+  "requires_completed_criteria": true
+}
+```
+
+**Solución:** Marcar criterios como completados antes de mover:
+```bash
+curl -X PATCH /api/projects/:slug/cards/:id \
+  -d '{
+    "acceptance_criteria": [
+      {"text": "Criterio 1", "completed": true},
+      {"text": "Criterio 2", "completed": true}
+    ]
+  }'
+```
+
 ## Campos IA en Tarjetas
 
 Al crear o tomar una tarjeta, Claude genera automáticamente:
