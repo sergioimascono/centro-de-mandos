@@ -12,9 +12,42 @@ El skill busca configuración en `.claude/centro-de-mando.json`:
   "server": "http://localhost:9500",
   "project": "nombre-proyecto",
   "auto_move": true,
-  "auto_analyze": true
+  "auto_analyze": true,
+  "skill_version": "1.1.0"
 }
 ```
+
+## Verificación de Versión (Al Iniciar Sesión)
+
+**IMPORTANTE:** Al inicio de cada sesión, verificar compatibilidad:
+
+```bash
+curl -s http://localhost:9500/api/version
+```
+
+**Respuesta esperada:**
+```json
+{
+  "version": "1.1.0",
+  "breaking_changes": ["..."]
+}
+```
+
+**Lógica de verificación:**
+1. Comparar `version` del servidor con `skill_version` en config local
+2. Si son diferentes:
+   - Mostrar aviso: "⚠️ Centro de Mando actualizado a vX.X.X"
+   - Consultar breaking_changes
+   - Sugerir actualizar skill desde Centro de Mando
+3. Si el servidor no responde:
+   - Avisar: "⚠️ Centro de Mando no disponible en localhost:9500"
+
+**Para actualizar el skill:**
+```bash
+cp "RUTA_CENTRO_MANDO/.claude/skills/centro-de-mando.md" .claude/skills/
+```
+
+Después actualizar `skill_version` en `.claude/centro-de-mando.json`.
 
 ## Comandos
 
@@ -164,6 +197,12 @@ Proyectos disponibles:
 **API para listar proyectos:**
 ```bash
 curl -s http://localhost:9500/api/projects | jq '.projects[].slug'
+```
+
+**Al guardar config, incluir versión actual:**
+```bash
+VERSION=$(curl -s http://localhost:9500/api/version | jq -r '.version')
+# Guardar en .claude/centro-de-mando.json con "skill_version": "$VERSION"
 ```
 
 ## Flujo de Trabajo Recomendado
